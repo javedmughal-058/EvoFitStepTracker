@@ -3,6 +3,7 @@ package com.evolixtechnologies.evofit.core.camera
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import java.util.ArrayDeque
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
@@ -21,28 +22,27 @@ class HeartRateAnalyzer(
     )
 
     private data class Point(val t: Long, val v: Double)
+    private data class FrameStats(val luminance: Double, val red: Double, val green: Double, val blue: Double)
+
     private val points = ArrayDeque<Point>()
+    private var consecutiveFingerFrames = 0
 
     override fun analyze(image: ImageProxy) {
         try {
             val now = System.currentTimeMillis()
-            val yPlane = image.planes[0].buffer
-            val remaining = yPlane.remaining()
-            if (remaining <= 0) return
+            val stats = readFrameStats(image) ?: return
+            val warmDominance = stats.red - max(stats.green, stats.blue)
+            val fingerCandidate = stats.luminance > 70.0 &&
+                stats.red > stats.green * 1.08 &&
+                stats.red > stats.blue * 1.12 &&
+                warmDominance > 10.0
 
-            val bytes = ByteArray(remaining)
-            yPlane.get(bytes)
-            val stride = (remaining / 2500).coerceAtLeast(1)
-            var sum = 0L
-            var count = 0
-            var i = 0
-            while (i < bytes.size) {
-                sum += (bytes[i].toInt() and 0xFF)
-                count++
-                i += stride
+            consecutiveFingerFrames = if (fingerCandidate) {
+                (consecutiveFingerFrames + 1).coerceAtMost(8)
+            } else {
+                0
             }
-            val avg = if (count == 0) 0.0 else sum.toDouble() / count
-            val finger = avg > 55.0
+            val finger = consecutiveFingerFrames >= 3
 
             if (!finger) {
                 points.clear()
@@ -50,7 +50,7 @@ class HeartRateAnalyzer(
                 return
             }
 
-            points.addLast(Point(now, avg))
+            points.addLast(Point(now, stats.luminance))
             while (points.isNotEmpty() && now - points.first().t > 30_000) points.removeFirst()
 
             val bpm = estimateBpm(points.toList())
@@ -60,6 +60,84 @@ class HeartRateAnalyzer(
         } finally {
             image.close()
         }
+    }
+
+    private fun readFrameStats(image: ImageProxy): FrameStats? {
+        if (image.planes.size < 3) return readLuminanceStats(image)
+
+        val yPlane = image.planes[0]
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+        val yBuffer = yPlane.buffer
+        val uBuffer = uPlane.buffer
+        val vBuffer = vPlane.buffer
+        val stepX = (image.width / 28).coerceAtLeast(1)
+        val stepY = (image.height / 28).coerceAtLeast(1)
+        var ySum = 0.0
+        var rSum = 0.0
+        var gSum = 0.0
+        var bSum = 0.0
+        var count = 0
+
+        var y = 0
+        while (y < image.height) {
+            var x = 0
+            while (x < image.width) {
+                val yIndex = y * yPlane.rowStride + x * yPlane.pixelStride
+                val chromaX = x / 2
+                val chromaY = y / 2
+                val uIndex = chromaY * uPlane.rowStride + chromaX * uPlane.pixelStride
+                val vIndex = chromaY * vPlane.rowStride + chromaX * vPlane.pixelStride
+
+                if (yIndex < yBuffer.limit() && uIndex < uBuffer.limit() && vIndex < vBuffer.limit()) {
+                    val yf = (yBuffer.get(yIndex).toInt() and 0xFF).toFloat()
+                    val uf = (uBuffer.get(uIndex).toInt() and 0xFF) - 128f
+                    val vf = (vBuffer.get(vIndex).toInt() and 0xFF) - 128f
+                    val red = (yf + 1.402f * vf).coerceIn(0f, 255f)
+                    val green = (yf - 0.344136f * uf - 0.714136f * vf).coerceIn(0f, 255f)
+                    val blue = (yf + 1.772f * uf).coerceIn(0f, 255f)
+                    ySum += yf
+                    rSum += red
+                    gSum += green
+                    bSum += blue
+                    count++
+                }
+                x += stepX
+            }
+            y += stepY
+        }
+
+        return if (count == 0) null else FrameStats(
+            luminance = ySum / count,
+            red = rSum / count,
+            green = gSum / count,
+            blue = bSum / count
+        )
+    }
+
+    private fun readLuminanceStats(image: ImageProxy): FrameStats? {
+        val yPlane = image.planes.firstOrNull() ?: return null
+        val yBuffer = yPlane.buffer
+        val stepX = (image.width / 28).coerceAtLeast(1)
+        val stepY = (image.height / 28).coerceAtLeast(1)
+        var sum = 0.0
+        var count = 0
+        var y = 0
+        while (y < image.height) {
+            var x = 0
+            while (x < image.width) {
+                val index = y * yPlane.rowStride + x * yPlane.pixelStride
+                if (index < yBuffer.limit()) {
+                    sum += (yBuffer.get(index).toInt() and 0xFF)
+                    count++
+                }
+                x += stepX
+            }
+            y += stepY
+        }
+        if (count == 0) return null
+        val luminance = sum / count
+        return FrameStats(luminance = luminance, red = luminance, green = luminance, blue = luminance)
     }
 
     private fun estimateBpm(values: List<Point>): Int? {

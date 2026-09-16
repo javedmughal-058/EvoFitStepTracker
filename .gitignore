@@ -3,3 +3,7 @@
 /app/build/
 /app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/
 /build/
+key.properties
+keystore.properties
+*.jks
+*.keystore

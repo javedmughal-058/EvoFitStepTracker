@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,16 +7,74 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+val preferredKeyPropertiesFile = rootProject.file("key.properties")
+val legacyKeyPropertiesFile = rootProject.file("keystore.properties")
+val keyPropertiesFile =
+    if (preferredKeyPropertiesFile.exists()) preferredKeyPropertiesFile else legacyKeyPropertiesFile
+val keyProperties = Properties().apply {
+    if (keyPropertiesFile.exists()) {
+        keyPropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+val requiredSigningKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+
+fun missingSigningKeys(): List<String> =
+    requiredSigningKeys.filter { keyProperties.getProperty(it).isNullOrBlank() }
+
+gradle.taskGraph.whenReady {
+    val buildingRelease = allTasks.any { task ->
+        task.name.contains("Release", ignoreCase = true) &&
+            (task.name.contains("bundle", ignoreCase = true) || task.name.contains("assemble", ignoreCase = true))
+    }
+    if (buildingRelease) {
+        if (!keyPropertiesFile.exists()) {
+            error("Missing ${keyPropertiesFile.absolutePath}. Create key.properties before building release.")
+        }
+        val missing = missingSigningKeys()
+        if (missing.isNotEmpty()) {
+            error("Missing ${missing.joinToString()} in ${keyPropertiesFile.absolutePath}. Required keys: ${requiredSigningKeys.joinToString()}.")
+        }
+        val signingStoreFile = rootProject.file(keyProperties.getProperty("storeFile"))
+        if (!signingStoreFile.exists()) {
+            error("Signing storeFile does not exist: ${signingStoreFile.absolutePath}")
+        }
+    }
+}
+
 android {
     namespace = "com.evolixtechnologies.evofit"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.evolixtechnologies.evofit"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            if (keyPropertiesFile.exists() && missingSigningKeys().isEmpty()) {
+                storeFile = rootProject.file(keyProperties.getProperty("storeFile"))
+                storePassword = keyProperties.getProperty("storePassword")
+                keyAlias = keyProperties.getProperty("keyAlias")
+                keyPassword = keyProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
     }
 
     compileOptions {
