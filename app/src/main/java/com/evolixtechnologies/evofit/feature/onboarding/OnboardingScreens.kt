@@ -131,7 +131,7 @@ fun WelcomeScreen(onNext: () -> Unit) {
                 Box(
                     Modifier
                         .size(if (it == pager.currentPage) 18.dp else 7.dp, 7.dp)
-                        .background(if (it == pager.currentPage) Color.Black else Color(0xFFD5D9D1), CircleShape)
+                        .background(if (it == pager.currentPage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                 )
             }
         }
@@ -370,7 +370,7 @@ private fun StepProgress(step: Int, total: Int) {
                 Box(
                     Modifier
                         .size(width = 74.dp, height = 10.dp)
-                        .background(if (index < step) EvoGreen else Color(0xFFE5ECF2), RoundedCornerShape(16.dp))
+                        .background(if (index < step) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
                 )
             }
         }

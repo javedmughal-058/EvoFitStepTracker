@@ -74,15 +74,15 @@ fun MeasureScreen(
         ActionCard("Log Activity", "Add your workout or activity.", Icons.Default.DirectionsRun, EvoGreen, onActivity)
         ActionCard("View History", "See all your measurements.", Icons.Default.History, Color(0xFFFF6B12), onHistory)
         Spacer(Modifier.weight(1f))
-        Surface(shape = com.evolixtechnologies.evofit.core.designsystem.EvoCardShape, color = EvoGreen.copy(alpha = .08f)) {
+        Surface(shape = com.evolixtechnologies.evofit.core.designsystem.EvoCardShape, color = MaterialTheme.colorScheme.primaryContainer) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Box(Modifier.size(44.dp).background(EvoGreen.copy(alpha = .18f), CircleShape), contentAlignment = Alignment.Center) {
-                    Text("i", color = Color(0xFF087816), style = MaterialTheme.typography.titleSmall)
+                Box(Modifier.size(44.dp).background(MaterialTheme.colorScheme.surface, CircleShape), contentAlignment = Alignment.Center) {
+                    Text("i", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleSmall)
                 }
                 Text(
                     "Heart-rate camera measurement is for wellness use only. Blood pressure should be entered from a validated cuff.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = EvoMuted
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         }
@@ -150,7 +150,7 @@ private fun ActionCard(
                 Text(subtitle, style = MaterialTheme.typography.bodyLarge, color = EvoMuted)
             }
             Box(Modifier.size(48.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF17203A))
+                Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurface)
             }
         }
     }

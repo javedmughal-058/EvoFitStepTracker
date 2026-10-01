@@ -8,6 +8,7 @@ import android.hardware.SensorManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlin.math.max
 
 /**
@@ -20,17 +21,36 @@ class StepCounterManager(context: Context) : SensorEventListener {
     private val stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
     private val prefs = appContext.getSharedPreferences("evofit_steps", Context.MODE_PRIVATE)
 
-    private val _steps = MutableStateFlow(prefs.getInt("last_steps", 0))
+    private val _steps = MutableStateFlow(if (prefs.getString("date", null) == LocalDate.now().toString()) prefs.getInt("last_steps", 0) else 0)
     val steps: StateFlow<Int> = _steps
 
     private val _paused = MutableStateFlow(prefs.getBoolean("paused", false))
     val paused: StateFlow<Boolean> = _paused
+    private var listenerRegistered = false
+
+    private val preferencesListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { shared, key ->
+        if (key == "last_steps") {
+            _steps.value = if (shared.getString("date", null) == LocalDate.now().toString()) shared.getInt("last_steps", 0) else 0
+        } else if (key == "paused") {
+            _paused.value = shared.getBoolean("paused", false)
+        }
+    }
 
     fun start() {
+        if (!listenerRegistered) {
+            prefs.registerOnSharedPreferenceChangeListener(preferencesListener)
+            listenerRegistered = true
+        }
         stepSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
     }
 
-    fun stop() = sensorManager.unregisterListener(this)
+    fun stop() {
+        sensorManager.unregisterListener(this)
+        if (listenerRegistered) {
+            prefs.unregisterOnSharedPreferenceChangeListener(preferencesListener)
+            listenerRegistered = false
+        }
+    }
 
     fun isSupported(): Boolean = stepSensor != null
 
@@ -58,12 +78,14 @@ class StepCounterManager(context: Context) : SensorEventListener {
     fun resetToday() {
         val today = LocalDate.now().toString()
         val current = prefs.getFloat("last_cumulative", prefs.getFloat("baseline", 0f))
-        prefs.edit()
+        val editor = prefs.edit()
             .putString("date", today)
             .putFloat("baseline", current)
+            .putInt("base_steps", 0)
             .putInt("last_steps", 0)
             .putInt("steps_$today", 0)
-            .apply()
+        (0..23).forEach { editor.remove("hour_${today}_$it") }
+        editor.apply()
         _steps.value = 0
     }
 
@@ -74,29 +96,40 @@ class StepCounterManager(context: Context) : SensorEventListener {
         var baseline = prefs.getFloat("baseline", -1f)
         prefs.edit().putFloat("last_cumulative", cumulative).apply()
 
-        if (savedDate != today || baseline < 0f || cumulative < baseline) {
+        val newDay = savedDate != today
+        if (newDay || baseline < 0f || cumulative < baseline) {
+            val carriedSteps = if (newDay) 0 else prefs.getInt("steps_$today", 0)
             baseline = cumulative
             prefs.edit()
                 .putString("date", today)
                 .putFloat("baseline", baseline)
-                .putInt("last_steps", 0)
-                .putInt("steps_$today", 0)
+                .putInt("base_steps", carriedSteps)
+                .putInt("last_steps", carriedSteps)
+                .putInt("steps_$today", carriedSteps)
                 .putBoolean("paused", false)
                 .remove("pause_cumulative")
                 .apply()
             _paused.value = false
         }
 
-        if (_paused.value) {
+        if (prefs.getBoolean("paused", false)) {
             return
         }
 
-        val todaySteps = max(0, (cumulative - baseline).toInt())
+        val todaySteps = prefs.getInt("base_steps", 0) + max(0, (cumulative - baseline).toInt())
+        val previousSteps = prefs.getInt("steps_$today", 0)
+        val hour = LocalDateTime.now().hour
+        val hourlyKey = "hour_${today}_$hour"
+        val goalKey = "goal_$today"
+        val configuredGoal = appContext.getSharedPreferences("evofit_app", Context.MODE_PRIVATE)
+            .getInt("step_goal", 8000)
         _steps.value = todaySteps
-        prefs.edit()
+        val editor = prefs.edit()
             .putInt("last_steps", todaySteps)
             .putInt("steps_$today", todaySteps)
-            .apply()
+            .putInt(hourlyKey, prefs.getInt(hourlyKey, 0) + (todaySteps - previousSteps).coerceAtLeast(0))
+        if (!prefs.contains(goalKey)) editor.putInt(goalKey, configuredGoal)
+        editor.apply()
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -105,7 +138,7 @@ class StepCounterManager(context: Context) : SensorEventListener {
         if (cumulative < 0f) return
         val today = LocalDate.now().toString()
         val baseline = prefs.getFloat("baseline", cumulative)
-        val todaySteps = max(0, (cumulative - baseline).toInt())
+        val todaySteps = prefs.getInt("base_steps", 0) + max(0, (cumulative - baseline).toInt())
         _steps.value = todaySteps
         prefs.edit()
             .putInt("last_steps", todaySteps)
