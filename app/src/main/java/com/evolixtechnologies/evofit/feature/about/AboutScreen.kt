@@ -79,8 +79,8 @@ fun AboutScreen() {
                 BrandTitle()
 
                 Text("Step Tracker", style = MaterialTheme.typography.titleSmall, color = EvoMuted)
-                Surface(shape = CircleShape, color = EvoGreen.copy(alpha = .13f)) {
-                    Text("Version 1.0.0", modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp), style = MaterialTheme.typography.bodySmall, color = Color(0xFF087816))
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                    Text("Version ${com.evolixtechnologies.evofit.BuildConfig.VERSION_NAME}", modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 Text("Small Steps. Big Progress.", textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge, color = EvoMuted)
             }

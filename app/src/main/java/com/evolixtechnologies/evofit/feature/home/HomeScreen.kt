@@ -116,15 +116,15 @@ fun HomeScreen(
                 Text("Good morning", style = MaterialTheme.typography.titleLarge)
                 Text(today, style = MaterialTheme.typography.bodyLarge, color = EvoMuted)
             }
-            Surface(shape = RoundedCornerShape(16.dp), color = EvoSoftGreen) {
-                Text("A healthier you\nstarts today.", textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), style = MaterialTheme.typography.bodyMedium, color = Color(0xFF0B6E14))
+            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                Text("A healthier you\nstarts today.", textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
 
         EvoCard {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                    IconPill(Icons.Default.DirectionsRun, EvoGreen, Modifier.size(68.dp))
+                    IconPill(Icons.Default.DirectionsRun, MaterialTheme.colorScheme.primary, Modifier.size(68.dp))
                     Column(Modifier.weight(1f).padding(start = 14.dp)) {
                         Text("Today's Steps", style = MaterialTheme.typography.bodyLarge, color = EvoMuted)
                         Row(verticalAlignment = Alignment.Bottom) {
@@ -133,10 +133,10 @@ fun HomeScreen(
                         }
                         Text("${(progress * 100).toInt()}% of daily goal", style = MaterialTheme.typography.bodyMedium, color = EvoMuted)
                     }
-                    Surface(shape = RoundedCornerShape(16.dp), color = EvoSoftGreen) {
+                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                         Column(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Goal", style = MaterialTheme.typography.bodySmall, color = EvoMuted)
-                            Text("%,d".format(safeGoal), style = MaterialTheme.typography.titleSmall)
+                            Text("Goal", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text("%,d".format(safeGoal), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                         }
                     }
                 }
@@ -145,18 +145,18 @@ fun HomeScreen(
                         CircularProgressIndicator(
                             progress = { progress },
                             modifier = Modifier.size(150.dp),
-                            color = EvoGreen,
-                            trackColor = Color(0xFFEAF0F2),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
                             strokeWidth = 16.dp
                         )
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.DirectionsRun, null, tint = EvoGreen, modifier = Modifier.size(28.dp))
+                            Icon(Icons.Default.DirectionsRun, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                             Text("${(progress * 100).toInt()}%", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                             Text("Goal reached", style = MaterialTheme.typography.bodySmall, color = EvoMuted)
                         }
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        MetricPill("%.1f km".format(distance), "Distance", EvoGreen)
+                        MetricPill("%.1f km".format(distance), "Distance", MaterialTheme.colorScheme.primary)
                         MetricPill("$calories kcal", "Calories", Color(0xFFFF7A2E))
                         MetricPill("${active} min", "Active time", EvoBlue)
                     }
@@ -208,7 +208,7 @@ fun HomeScreen(
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Health snapshot", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-            Text("See all >", color = EvoGreen, style = MaterialTheme.typography.labelMedium)
+            Text("See all >", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SnapshotCard(Modifier.weight(1f), Icons.Default.Favorite, EvoRed, latestHeartRate, "Heart rate", latestHeartRateSubtitle)

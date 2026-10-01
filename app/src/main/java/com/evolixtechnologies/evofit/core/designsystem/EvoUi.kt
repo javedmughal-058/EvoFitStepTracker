@@ -74,7 +74,7 @@ fun EvoPrimaryButton(
         modifier = modifier.fillMaxWidth().height(52.dp),
         shape = EvoButtonShape,
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = EvoGreen, contentColor = Color.White)
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
     ) {
         Text(text, fontWeight = FontWeight.ExtraBold)
 //        Spacer(Modifier.size(8.dp))
@@ -149,7 +149,7 @@ fun EvoListRow(
                 .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = EvoBlack, modifier = Modifier.size(22.dp))
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -200,12 +200,12 @@ fun EvoFilterChip(
         },
         modifier = modifier.height(56.dp),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.5.dp, if (selected) EvoGreen else MaterialTheme.colorScheme.outline.copy(alpha = .55f)),
+        border = BorderStroke(1.5.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = .55f)),
         colors = FilterChipDefaults.filterChipColors(
             containerColor = MaterialTheme.colorScheme.surface,
             labelColor = MaterialTheme.colorScheme.onSurface,
-            selectedContainerColor = EvoGreen.copy(alpha = .12f),
-            selectedLabelColor = MaterialTheme.colorScheme.onSurface
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
         )
     )
 }

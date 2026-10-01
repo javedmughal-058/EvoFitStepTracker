@@ -1,6 +1,9 @@
 package com.evolixtechnologies.evofit.feature.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -97,14 +100,14 @@ fun ProfileScreen(
         }
         EvoCard {
             Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(Modifier.size(86.dp).background(EvoGreen.copy(alpha = .16f), CircleShape), contentAlignment = Alignment.Center) {
-                    Text(initials, color = Color(0xFF087816), fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleLarge)
+                Box(Modifier.size(86.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape), contentAlignment = Alignment.Center) {
+                    Text(initials, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleLarge)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(displayName, style = MaterialTheme.typography.titleMedium)
                     Text("$gender - $age yrs", style = MaterialTheme.typography.bodyMedium, color = EvoMuted)
-                    Box(Modifier.background(EvoGreen.copy(alpha = .13f), RoundedCornerShape(24.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
-                        Text("Healthier you starts today.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF0B6E14))
+                    Box(Modifier.background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(24.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                        Text("Healthier you starts today.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
             }
@@ -129,7 +132,7 @@ fun ProfileScreen(
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .6f))
             EvoListRow(Icons.Default.Info, "About", "App version and legal info", tint = Color(0xFF737A8C), onClick = onAbout)
         }
-        Text("EvoFit - Step Tracker - v1.0.0", style = MaterialTheme.typography.bodySmall, color = EvoMuted, modifier = Modifier.align(Alignment.CenterHorizontally))
+        Text("EvoFit - Step Tracker - v${com.evolixtechnologies.evofit.BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodySmall, color = EvoMuted, modifier = Modifier.align(Alignment.CenterHorizontally))
         Spacer(Modifier.height(8.dp))
     }
 }
@@ -151,7 +154,7 @@ fun NotificationSettingsScreen(enabled: Boolean, onEnabledChange: (Boolean) -> U
                 Switch(
                     checked = enabled,
                     onCheckedChange = onEnabledChange,
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = EvoGreen)
+                    colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.onPrimary, checkedTrackColor = MaterialTheme.colorScheme.primary)
                 )
             }
         }
@@ -180,16 +183,22 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
 }
 
 @Composable
-fun AppearanceScreen(themeMode: String, onThemeSelected: (String) -> Unit, onBack: () -> Unit) {
+fun AppearanceScreen(
+    themeMode: String,
+    onThemeSelected: (String) -> Unit,
+    accentName: String,
+    onAccentSelected: (String) -> Unit,
+    onBack: () -> Unit
+) {
     var theme by remember(themeMode) { mutableStateOf(themeMode) }
     val pageColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
     val mutedColor = MaterialTheme.colorScheme.onBackground.copy(alpha = .62f)
 
-    Column(Modifier.fillMaxSize().background(pageColor).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    Column(Modifier.fillMaxSize().background(pageColor).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Box(Modifier.size(58.dp).background(EvoGreen.copy(alpha = .12f), CircleShape), contentAlignment = Alignment.Center) {
-                IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color(0xFF087816)) }
+            Box(Modifier.size(58.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape), contentAlignment = Alignment.Center) {
+                IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = MaterialTheme.colorScheme.primary) }
             }
             Column {
                 Text("Appearance", color = textColor, style = MaterialTheme.typography.titleLarge)
@@ -215,6 +224,29 @@ fun AppearanceScreen(themeMode: String, onThemeSelected: (String) -> Unit, onBac
                 }
             }
         }
+        Text("ACCENT COLOR", color = mutedColor, style = MaterialTheme.typography.labelLarge)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            listOf(
+                "Green" to Color(0xFF10921F),
+                "Blue" to Color(0xFF1677F2),
+                "Orange" to Color(0xFFE86A13),
+                "Pink" to Color(0xFFD92D72),
+                "Teal" to Color(0xFF009B87)
+            ).forEach { (name, color) ->
+                Surface(onClick = { onAccentSelected(name) }, shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(if (accentName == name) 2.dp else 1.dp,
+                        if (accentName == name) color else MaterialTheme.colorScheme.outline)) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(Modifier.size(38.dp).background(color, CircleShape))
+                        Text(name, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -223,19 +255,20 @@ private fun ThemeOption(title: String, subtitle: String, icon: ImageVector, sele
     Row(
         Modifier
             .fillMaxWidth()
-            .background(if (selected) EvoGreen.copy(alpha = .10f) else Color.Transparent, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent, RoundedCornerShape(16.dp))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Box(Modifier.size(62.dp).background(EvoGreen.copy(alpha = .11f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = if (selected) Color(0xFF087816) else MaterialTheme.colorScheme.onSurface)
+        Box(Modifier.size(62.dp).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
         }
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = EvoMuted)
         }
-        RadioButton(selected = selected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF087816)))
+        RadioButton(selected = selected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary))
     }
 }
 

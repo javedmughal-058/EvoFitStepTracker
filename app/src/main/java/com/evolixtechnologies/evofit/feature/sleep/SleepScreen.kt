@@ -69,11 +69,11 @@ fun SleepScreen(onSave: (String, String, Int, String, String) -> Unit) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         }
-        error?.let { Text(it, color = Color(0xFFFF4E64), style = MaterialTheme.typography.bodySmall) }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
         SleepStages(Modifier.fillMaxWidth().height(28.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf("Deep", "Light", "REM", "Awake").forEachIndexed { index, label ->
-                Text(label, color = listOf(EvoBlue, Color(0xFF6377FF), EvoPurple, Color(0xFFD0D4DD))[index], style = MaterialTheme.typography.bodySmall)
+                Text(label, color = if (index == 3) EvoMuted else listOf(EvoBlue, Color(0xFF6377FF), EvoPurple)[index], style = MaterialTheme.typography.bodySmall)
             }
         }
         Text("Sleep quality", style = MaterialTheme.typography.titleSmall)

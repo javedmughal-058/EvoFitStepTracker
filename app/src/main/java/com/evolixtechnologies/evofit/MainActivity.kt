@@ -3,6 +3,7 @@ package com.evolixtechnologies.evofit
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -16,15 +17,95 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startForegroundService
+import androidx.core.view.WindowCompat
+import androidx.compose.ui.graphics.toArgb
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.evolixtechnologies.evofit.core.designsystem.EvoFitTheme
 import com.evolixtechnologies.evofit.core.navigation.EvoFitNavHost
+import com.evolixtechnologies.evofit.core.update.RequiredUpdateDialog
 import com.evolixtechnologies.evofit.core.sensors.StepCounterManager
 import com.evolixtechnologies.evofit.core.sensors.StepTrackingService
 import com.evolixtechnologies.evofit.data.local.AppDatabase
 import com.evolixtechnologies.evofit.data.repository.HealthRepository
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateOptions
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
 
 class MainActivity : ComponentActivity() {
+    private val updateManager by lazy { AppUpdateManagerFactory.create(this) }
+    private var requiredUpdateBuild by mutableStateOf<Int?>(null)
+    private var useStoreFallback by mutableStateOf(false)
+    private val updateLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        if (result.resultCode != RESULT_OK) checkForUpdate()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkForUpdate()
+    }
+
+    private fun checkForUpdate() {
+        updateManager.appUpdateInfo.addOnSuccessListener { info ->
+            when (info.updateAvailability()) {
+                UpdateAvailability.UPDATE_AVAILABLE -> {
+                    requiredUpdateBuild = info.availableVersionCode().takeIf { it > BuildConfig.VERSION_CODE }
+                    useStoreFallback = !info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
+                }
+                UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS -> {
+                    requiredUpdateBuild = info.availableVersionCode().takeIf { it > BuildConfig.VERSION_CODE }
+                    if (info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+                        launchImmediateUpdate(info)
+                    } else {
+                        useStoreFallback = true
+                    }
+                }
+                else -> requiredUpdateBuild = null
+            }
+        }
+    }
+
+    private fun launchImmediateUpdate(info: com.google.android.play.core.appupdate.AppUpdateInfo) {
+        val started = runCatching {
+            updateManager.startUpdateFlowForResult(
+                info,
+                updateLauncher,
+                AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build()
+            )
+        }.getOrDefault(false)
+        if (!started) useStoreFallback = true
+    }
+
+    private fun updateNow() {
+        if (useStoreFallback) {
+            openPlayStore()
+            return
+        }
+        updateManager.appUpdateInfo.addOnSuccessListener { info ->
+            if (info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE) &&
+                info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+            ) {
+                launchImmediateUpdate(info)
+            } else {
+                useStoreFallback = true
+                openPlayStore()
+            }
+        }.addOnFailureListener {
+            useStoreFallback = true
+            openPlayStore()
+        }
+    }
+
+    private fun openPlayStore() {
+        val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName"))
+        runCatching { startActivity(market) }.onFailure {
+            runCatching {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -52,6 +133,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val nav = rememberNavController()
             var themeMode by remember { mutableStateOf(prefs.getString("theme_mode", "System") ?: "System") }
+            var accentName by remember { mutableStateOf(prefs.getString("accent_name", "Green") ?: "Green") }
             val systemDark = isSystemInDarkTheme()
             val useDarkTheme = when (themeMode) {
                 "Light" -> false
@@ -59,7 +141,19 @@ class MainActivity : ComponentActivity() {
                 else -> systemDark
             }
 
-            EvoFitTheme(darkTheme = useDarkTheme) {
+            EvoFitTheme(darkTheme = useDarkTheme, accentName = accentName) {
+                val route = nav.currentBackStackEntryAsState().value?.destination?.route
+                val darkScreen = useDarkTheme || route == "hr_measure"
+                val systemBarColor = if (route == "hr_measure") android.graphics.Color.rgb(7, 16, 8)
+                    else androidx.compose.material3.MaterialTheme.colorScheme.background.toArgb()
+                SideEffect {
+                    window.statusBarColor = systemBarColor
+                    window.navigationBarColor = systemBarColor
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = !darkScreen
+                        isAppearanceLightNavigationBars = !darkScreen
+                    }
+                }
                 val steps by stepCounter.steps.collectAsState()
                 val paused by stepCounter.paused.collectAsState()
                 var onboardingDone by remember { mutableStateOf(prefs.getBoolean("onboarding_done", false)) }
@@ -176,6 +270,9 @@ class MainActivity : ComponentActivity() {
                             .putString("active_goal", goals.activeMinutes)
                             .putString("calories_goal", goals.calories)
                             .apply()
+                        getSharedPreferences("evofit_steps", MODE_PRIVATE).edit()
+                            .putInt("goal_${java.time.LocalDate.now()}", goals.steps)
+                            .apply()
                     },
                     onPauseSteps = { stepCounter.pause() },
                     onResumeSteps = { stepCounter.resume() },
@@ -188,6 +285,11 @@ class MainActivity : ComponentActivity() {
                         stopService(Intent(this, StepTrackingService::class.java))
                     },
                     themeMode = themeMode,
+                    accentName = accentName,
+                    onSaveAccent = { name ->
+                        accentName = name
+                        prefs.edit().putString("accent_name", name).apply()
+                    },
                     onSaveThemeMode = { mode ->
                         themeMode = mode
                         prefs.edit().putString("theme_mode", mode).apply()
@@ -197,6 +299,13 @@ class MainActivity : ComponentActivity() {
                         prefs.edit().putBoolean("onboarding_done", true).apply()
                     }
                 )
+                requiredUpdateBuild?.let { availableBuild ->
+                    RequiredUpdateDialog(
+                        installedVersionName = BuildConfig.VERSION_NAME,
+                        availableVersionCode = availableBuild,
+                        onUpdate = ::updateNow
+                    )
+                }
             }
         }
     }

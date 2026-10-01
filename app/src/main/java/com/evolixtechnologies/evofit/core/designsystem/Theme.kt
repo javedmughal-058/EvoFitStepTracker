@@ -6,6 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -19,7 +20,9 @@ val EvoGreenDark = Color(0xFF10921F)
 val EvoBlack = Color(0xFF080B1A)
 val EvoSurface = Color(0xFFF5FAFC)
 val EvoBorder = Color(0xFFE7EDF3)
-val EvoMuted = Color(0xFF727A99)
+private val LightMuted = Color(0xFF727A99)
+val EvoMuted: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 val EvoRed = Color(0xFFFF5C65)
 val EvoBlue = Color(0xFF1677F2)
 val EvoPurple = Color(0xFF8657F5)
@@ -44,7 +47,7 @@ private val Light = lightColorScheme(
     surface = Color.White,
     onSurface = EvoBlack,
     surfaceVariant = Color(0xFFF0F5F9),
-    onSurfaceVariant = EvoMuted,
+    onSurfaceVariant = LightMuted,
     outline = EvoBorder,
     secondary = EvoGreenDark,
     secondaryContainer = Color(0xFFDDFCCF),
@@ -61,7 +64,7 @@ private val Dark = darkColorScheme(
     surface = Color(0xFF181B18),
     onSurface = Color(0xFFF5F7F4),
     surfaceVariant = Color(0xFF263124),
-    onSurfaceVariant = Color(0xFFD4DEC9),
+    onSurfaceVariant = Color(0xFFB8C4B6),
     outline = Color(0xFF2A2E2A),
     secondary = EvoGreen,
     secondaryContainer = Color(0xFF275900),
@@ -86,10 +89,24 @@ private val EvoTypography = Typography(
 @Composable
 fun EvoFitTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    accentName: String = "Green",
     content: @Composable () -> Unit
 ) {
+    val accent = when (accentName) {
+        "Blue" -> Color(0xFF1677F2)
+        "Orange" -> Color(0xFFE86A13)
+        "Pink" -> Color(0xFFD92D72)
+        "Teal" -> Color(0xFF009B87)
+        else -> if (darkTheme) EvoGreen else EvoGreenDark
+    }
+    val scheme = (if (darkTheme) Dark else Light).copy(
+        primary = accent,
+        onPrimary = if (accent.luminance() > .30f) Color.Black else Color.White,
+        primaryContainer = accent.copy(alpha = if (darkTheme) .28f else .13f),
+        onPrimaryContainer = if (darkTheme) Color.White else accent
+    )
     MaterialTheme(
-        colorScheme = if (darkTheme) Dark else Light,
+        colorScheme = scheme,
         typography = EvoTypography,
         content = content
     )
