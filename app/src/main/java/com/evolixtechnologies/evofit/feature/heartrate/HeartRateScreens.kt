@@ -316,9 +316,9 @@ fun HeartRateResultScreen(bpm: Int, onSave: (String) -> Unit, onAgain: () -> Uni
         AssistChip(
             onClick = {},
             label = { Text("Normal resting range") },
-            colors = AssistChipDefaults.assistChipColors(containerColor = EvoGreen.copy(.12f), labelColor = Color(0xFF217600))
+            colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer, labelColor = MaterialTheme.colorScheme.onPrimaryContainer)
         )
-        Text("15 Sep 2025 - 9:42 PM", style = MaterialTheme.typography.bodySmall, color = EvoMuted)
+        Text(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy - h:mm a")), style = MaterialTheme.typography.bodySmall, color = EvoMuted)
         Text("How were you measuring?", style = MaterialTheme.typography.titleSmall, modifier = Modifier.fillMaxWidth())
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

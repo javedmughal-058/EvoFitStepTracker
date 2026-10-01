@@ -88,6 +88,8 @@ fun EvoFitNavHost(
     onStartTracking: () -> Unit,
     onStopTracking: () -> Unit,
     themeMode: String,
+    accentName: String,
+    onSaveAccent: (String) -> Unit,
     onSaveThemeMode: (String) -> Unit,
     onCompleteOnboarding: () -> Unit
 ) {
@@ -97,9 +99,9 @@ fun EvoFitNavHost(
     val route = currentEntry?.destination?.route
     val mainRoutes = setOf(HOME, ACTIVITY, MEASURE, PROFILE)
     val navItemColors = NavigationBarItemDefaults.colors(
-        selectedIconColor = Color(0xFF087816),
-        selectedTextColor = Color(0xFF087816),
-        indicatorColor = EvoGreen.copy(alpha = .16f),
+        selectedIconColor = MaterialTheme.colorScheme.primary,
+        selectedTextColor = MaterialTheme.colorScheme.primary,
+        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
         unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = .66f),
         unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = .66f)
     )
@@ -206,7 +208,17 @@ fun EvoFitNavHost(
                     onMeasure = { nav.navigate(MEASURE) }
                 )
             }
-            composable(ACTIVITY) { ActivityScreen(steps, stepGoal) }
+            composable(ACTIVITY) {
+                ActivityScreen(
+                    steps = steps,
+                    stepGoal = stepGoal,
+                    distanceGoal = distanceGoal,
+                    activeGoal = activeGoal,
+                    caloriesGoal = caloriesGoal,
+                    onEditGoals = { nav.navigate(EDIT_GOAL) },
+                    onHistory = { nav.navigate(HISTORY) }
+                )
+            }
             composable(MEASURE) {
                 MeasureScreen(
                     onHeart = { nav.navigate(HR_INTRO) },
@@ -283,7 +295,8 @@ fun EvoFitNavHost(
                 val heartRates by repo.observeHeartRate().collectAsState(initial = emptyList())
                 val bloodPressure by repo.observeBloodPressure().collectAsState(initial = emptyList())
                 val activities by repo.observeActivity().collectAsState(initial = emptyList())
-                HistoryScreen(heartRates, bloodPressure, activities, onBack = { nav.popBackStack() })
+                val sleepLogs by repo.observeSleep().collectAsState(initial = emptyList())
+                HistoryScreen(heartRates, bloodPressure, activities, sleepLogs, steps, onBack = { nav.popBackStack() })
             }
             composable(NOTIFICATIONS) {
                 NotificationSettingsScreen(
@@ -295,7 +308,10 @@ fun EvoFitNavHost(
                 )
             }
             composable(DATA_PRIVACY) { DataPrivacyScreen(onBack = { nav.popBackStack() }) }
-            composable(APPEARANCE) { AppearanceScreen(themeMode = themeMode, onThemeSelected = onSaveThemeMode, onBack = { nav.popBackStack() }) }
+            composable(APPEARANCE) {
+                AppearanceScreen(themeMode = themeMode, onThemeSelected = onSaveThemeMode,
+                    accentName = accentName, onAccentSelected = onSaveAccent, onBack = { nav.popBackStack() })
+            }
             composable(ABOUT) { AboutScreen() }
         }
     }

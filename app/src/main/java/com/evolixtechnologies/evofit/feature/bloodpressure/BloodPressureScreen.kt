@@ -46,12 +46,12 @@ fun BloodPressureScreen(onSave: (Int, Int, Int?) -> Unit) {
     val valid = (sys.toIntOrNull() ?: 0) in 70..250 && (dia.toIntOrNull() ?: 0) in 40..150
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         EvoTopBar("Blood Pressure", subtitle = "Record a reading from a validated cuff.")
-        Surface(shape = RoundedCornerShape(16.dp), color = EvoGreen.copy(alpha = .07f), tonalElevation = 1.dp) {
+        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer, tonalElevation = 1.dp) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Box(Modifier.size(54.dp).background(EvoGreen.copy(alpha = .14f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Info, null, tint = Color(0xFF087816))
+                Box(Modifier.size(54.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary)
                 }
-                Text("A phone camera cannot directly measure clinical blood pressure reliably.", style = MaterialTheme.typography.bodyLarge, color = Color(0xFF063F14))
+                Text("A phone camera cannot directly measure clinical blood pressure reliably.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
